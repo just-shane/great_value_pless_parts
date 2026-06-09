@@ -137,7 +137,13 @@ def estimate(request: QuoteRequest) -> QuoteResponse:
     # --- Geometry in imperial -------------------------------------------------
     part_in3 = geom.volume_cm3 / CM3_PER_IN3
     area_in2 = geom.surface_area_cm2 / CM2_PER_IN2
-    stock_in3 = _stock_volume_in3(geom, machine_type, waste)
+    if geom.stock_volume_cm3:
+        # Real stock (e.g. from a CAM setup) — use it directly, no waste guess.
+        stock_in3 = geom.stock_volume_cm3 / CM3_PER_IN3
+        stock_from_cam = True
+    else:
+        stock_in3 = _stock_volume_in3(geom, machine_type, waste)
+        stock_from_cam = False
     if stock_in3 < part_in3:  # guard against odd geometry
         stock_in3 = part_in3 * (1.0 + waste)
     removed_in3 = max(stock_in3 - part_in3, 0.0)
@@ -215,7 +221,11 @@ def estimate(request: QuoteRequest) -> QuoteResponse:
         LineItem(
             label="Material",
             amount=_round2(material_cost),
-            detail=f"{stock_in3:.2f} in^3 {material.name} stock @ ${material.rate_usd_per_in3:.2f}/in^3",
+            detail=(
+                f"{stock_in3:.2f} in^3 {material.name} "
+                f"{'(CAM stock)' if stock_from_cam else 'stock'} @ "
+                f"${material.rate_usd_per_in3:.2f}/in^3"
+            ),
         ),
         LineItem(
             label="Tooling",
@@ -251,6 +261,9 @@ def estimate(request: QuoteRequest) -> QuoteResponse:
         area_to_volume = area_in2 / part_in3 if part_in3 else 0.0
         confidence, flags = _confidence_and_flags(material, removed_ratio, area_to_volume)
         flags.extend(extra_flags)
+
+    if stock_from_cam:
+        flags.append("stock_from_cam_setup")
 
     lead = p["lead_time"]
     lead_time_days = (

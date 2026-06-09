@@ -52,11 +52,20 @@ off as they land.
       generated toolpaths and confirm the live machining times come through)
 - [ ] **Load the add-in in Fusion** as an actual add-in and quote end-to-end
       through the palette
-- [ ] Map CAM tool material/setup stock → backend material + stock automatically
+- [x] Auto-map CAM setup → backend: machine type (`operationType` + Swiss
+      detection), stock material (`stockMaterial`), and real stock volume
+      (`stockSolids`). Programmed parts quote with zero manual input.
 - [x] Milling operations in pure ops mode (no CAM): mill_profile / mill_pocket /
       mill_face via path-length × feed-rate (sample_payload_milling.json)
 - [ ] Add 16×16 / 32×32 button icons under `commands/quote/resources/`
-- [ ] Sync/parallel-channel modeling for Swiss (main + sub spindle overlap)
+
+## 🧠 Hard / needs care (don't ship naive)
+
+- [ ] **Swiss sync / parallel-channel cycle time** — main + sub spindle overlap,
+      back-working during main turning, pinch/balanced turning, gang-tool timing.
+      Summing ops overestimates; max-of-channel underestimates. Needs channel
+      assignments + wait/sync codes. Leave geometry/CAM as the cycle source until
+      this can be modeled properly. (Flagged hard by the shop — don't fake it.)
 - [ ] Quantity input in the palette + re-quote without re-clicking the button
 - [ ] Handle assemblies (sum/iterate occurrences, per-component quotes)
 - [ ] Graceful UX when the backend is unreachable (retry + clear error in palette)

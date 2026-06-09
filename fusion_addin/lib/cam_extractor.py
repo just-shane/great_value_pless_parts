@@ -1,13 +1,15 @@
-"""Read CAM operations (and Fusion's own machining times) from the active doc.
+"""Read quote inputs from the active doc's CAM (Manufacture) data.
 
-When the active document has a Manufacture (CAM) product with generated
-toolpaths, this returns a list of operations in the backend's contract, each
-carrying Fusion's computed ``cycle_time_sec``. The backend then prices from
-those real times (confidence ``high``, source ``fusion_cam``) — no speeds/feeds
-lookup needed.
+When the document has a Manufacture (CAM) product, this returns everything the
+backend needs to quote a *programmed* part with zero manual input:
 
-When there's no CAM (or no generated toolpaths), it returns ``None`` and the
-caller falls back to geometry mode.
+  - operations  : each op's type + Fusion machiningTime (cycle_time_sec)
+  - machine_type: from the setup operation type (mill / lathe / swiss)
+  - material    : the setup's stock material name (backend fuzzy-matches it)
+  - stock_volume_cm3 : real stock volume from the setup's stock solids
+
+Returns ``None`` when there's no CAM; the caller falls back to the design
+geometry + the dialog's material/machine selections.
 """
 
 import adsk.core
@@ -17,6 +19,9 @@ import adsk.cam
 _FEED_SCALE = 100.0
 _RAPID_FEED_CM_S = 42.0
 _TOOL_CHANGE_SEC = 5.0
+
+# Vendor/model substrings that imply a Swiss-type lathe.
+_SWISS_KEYWORDS = ("swiss", "citizen", "star ", "tsugami", "tornos", "hanwha", "nexturn", "escomatic")
 
 # Fusion CAM strategyType -> backend operation type.
 _STRATEGY_MAP = {
@@ -80,12 +85,64 @@ def _tool_dia_in(op):
     return None
 
 
-def get_cam_operations():
-    """Return ``{available, operations, total_machining_sec}`` or ``None``."""
+def _machine_type(setup) -> str | None:
+    try:
+        op_type = setup.operationType
+    except Exception:
+        return None
+    if op_type == adsk.cam.OperationTypes.MillingOperation:
+        return "mill"
+    if op_type == adsk.cam.OperationTypes.TurningOperation:
+        name = ""
+        try:
+            machine = setup.machine
+            if machine:
+                name = f"{machine.vendor or ''} {machine.model or ''} {machine.description or ''}".lower()
+        except Exception:
+            name = ""
+        if any(k in name for k in _SWISS_KEYWORDS):
+            return "swiss"
+        return "lathe"
+    return "mill"
+
+
+def _stock_volume_cm3(setup):
+    try:
+        solids = setup.stockSolids
+    except Exception:
+        return None
+    if not solids or solids.count == 0:
+        return None
+    total = 0.0
+    found = False
+    for ent in solids:
+        try:
+            props = ent.physicalProperties
+            if props:
+                total += props.volume
+                found = True
+        except Exception:
+            continue
+    return round(total, 4) if found and total > 0 else None
+
+
+def _stock_material(setup):
+    try:
+        mat = setup.stockMaterial
+    except Exception:
+        return None
+    if not mat:
+        return None
+    return getattr(mat, "name", None) or (mat if isinstance(mat, str) else None)
+
+
+def get_cam_inputs():
+    """Return ``{available, operations, machine_type, material_name,
+    stock_volume_cm3, total_machining_sec}`` or ``None`` if there's no CAM."""
     cam = get_active_cam()
     if not cam:
         return None
-    if cam.allOperations.count == 0:
+    if cam.setups.count == 0 or cam.allOperations.count == 0:
         return {"available": False, "reason": "no_cam_operations"}
 
     operations = []
@@ -96,8 +153,7 @@ def get_cam_operations():
         generated.add(op)
         seconds = None
         try:
-            mt = cam.getMachiningTime(op, _FEED_SCALE, _RAPID_FEED_CM_S, _TOOL_CHANGE_SEC)
-            seconds = round(mt.machiningTime, 2)
+            seconds = round(cam.getMachiningTime(op, _FEED_SCALE, _RAPID_FEED_CM_S, _TOOL_CHANGE_SEC).machiningTime, 2)
         except Exception:
             seconds = None
         operations.append(
@@ -112,13 +168,26 @@ def get_cam_operations():
     if not operations:
         return {"available": False, "reason": "toolpaths_not_generated"}
 
+    # Setup-level inputs come from the first setup that has operations.
+    setup = None
+    for s in cam.setups:
+        if s.allOperations.count > 0:
+            setup = s
+            break
+    if setup is None:
+        setup = cam.setups.item(0)
+
     total = None
     try:
-        total = round(
-            cam.getMachiningTime(generated, _FEED_SCALE, _RAPID_FEED_CM_S, _TOOL_CHANGE_SEC).machiningTime,
-            2,
-        )
+        total = round(cam.getMachiningTime(generated, _FEED_SCALE, _RAPID_FEED_CM_S, _TOOL_CHANGE_SEC).machiningTime, 2)
     except Exception:
         total = None
 
-    return {"available": True, "operations": operations, "total_machining_sec": total}
+    return {
+        "available": True,
+        "operations": operations,
+        "machine_type": _machine_type(setup),
+        "material_name": _stock_material(setup),
+        "stock_volume_cm3": _stock_volume_cm3(setup),
+        "total_machining_sec": total,
+    }

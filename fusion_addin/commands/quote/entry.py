@@ -169,14 +169,24 @@ def command_execute(args: adsk.core.CommandEventArgs):
     else:
         material = material_key
 
-    # If the document has CAM toolpaths, send the real operations (with Fusion's
-    # machining times) so the backend prices from measured cycle time.
+    # If the document is programmed (has CAM), auto-fill everything from the CAM
+    # setup: real operations + machining times, machine type, stock material, and
+    # actual stock volume. CAM values override the dialog selections.
     operations = None
     try:
-        cam_data = cam_extractor.get_cam_operations()
-        if cam_data and cam_data.get("available"):
-            operations = cam_data["operations"]
-            futil.log(f"Found {len(operations)} CAM operations")
+        cam = cam_extractor.get_cam_inputs()
+        if cam and cam.get("available"):
+            operations = cam.get("operations")
+            if cam.get("machine_type"):
+                machine_key = cam["machine_type"]
+            if cam.get("material_name"):
+                material = cam["material_name"]
+            if cam.get("stock_volume_cm3"):
+                geometry["stock_volume_cm3"] = cam["stock_volume_cm3"]
+            futil.log(
+                f"CAM auto-fill: {len(operations or [])} ops, "
+                f"machine={machine_key}, material={material}"
+            )
     except Exception:  # noqa: BLE001 - CAM is optional; never block the quote
         operations = None
 

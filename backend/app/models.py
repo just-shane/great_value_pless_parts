@@ -37,6 +37,12 @@ class PartGeometry(BaseModel):
     surface_area_cm2: float = Field(gt=0, description="Surface area (cm^2)")
     bounding_box: BoundingBox
     mass_kg: float | None = Field(default=None, ge=0)
+    stock_volume_cm3: float | None = Field(
+        default=None,
+        gt=0,
+        description="Actual stock volume (e.g. from a CAM setup). Overrides the "
+        "bounding-box stock estimate for material cost when present.",
+    )
 
 
 class QuoteRequest(BaseModel):

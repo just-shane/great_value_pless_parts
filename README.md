@@ -203,6 +203,20 @@ via `CAM.getMachiningTime`), then falls back automatically. So a programmed part
 quotes from its *actual* toolpath times; an unprogrammed part still quotes from
 geometry.
 
+**Zero-input quoting on a programmed part.** When the doc has CAM, the add-in
+auto-fills everything from the setup — no dropdowns needed:
+
+| Input | Source |
+| --- | --- |
+| operations + cycle times | each op's `strategyType` + `machiningTime` |
+| machine type | `setup.operationType` (+ Swiss detection from `machine.vendor/model`) |
+| material | `setup.stockMaterial` (backend fuzzy-matches it) |
+| stock volume | `setup.stockSolids` → real stock, not the bounding box |
+
+CAM values override the dialog selections; on an unprogrammed part the dialog
+selections are used. The material line item shows `(CAM stock)` and the quote is
+flagged `stock_from_cam_setup` when the real stock drove the cost.
+
 ---
 
 ## Roadmap
