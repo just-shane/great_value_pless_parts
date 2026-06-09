@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "addin",
+    "id": "b4e2c1a0-9f3d-4c77-8a21-7e5d6c9f0a12",
+    "author": "Great Value Pless Parts contributors",
+    "description": {
+        "": "Off-brand instant manufacturing quotes inside Autodesk Fusion. Not affiliated with Paperless Parts."
+    },
+    "version": "0.1.0",
+    "runOnStartup": false,
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Great Value Quote</title>
+    <link rel="stylesheet" href="palette.css" />
+  </head>
+  <body>
+    <header class="hdr">
+      <h1>Great Value Pless Parts <span aria-hidden="true">🏷️</span></h1>
+      <p class="tagline">Off-brand instant quote</p>
+    </header>
+
+    <main class="content">
+      <p class="empty" id="empty-state">
+        Click <strong>Get Quote</strong> in the Great Value panel to estimate the
+        active part.
+      </p>
+
+      <section id="quote" hidden>
+        <div class="price-card">
+          <span class="unit-price" id="unit-price">$0.00</span>
+          <span class="unit-label">per unit</span>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat"><span class="k">Qty</span><span class="v" id="quantity">—</span></div>
+          <div class="stat"><span class="k">Total</span><span class="v" id="total-price">—</span></div>
+          <div class="stat"><span class="k">Lead</span><span class="v" id="lead-time">—</span></div>
+        </div>
+
+        <dl class="meta">
+          <div><dt>Part</dt><dd id="part-name">—</dd></div>
+          <div><dt>Material</dt><dd id="material">—</dd></div>
+          <div><dt>Process</dt><dd id="process">—</dd></div>
+        </dl>
+
+        <h2>Cost breakdown</h2>
+        <table class="line-items"><tbody id="line-items"></tbody></table>
+
+        <ul class="notes" id="notes"></ul>
+      </section>
+    </main>
+
+    <footer class="ftr">
+      <p class="disclaimer" id="disclaimer"></p>
+    </footer>
+
+    <script src="palette.js"></script>
+  </body>
+</html>

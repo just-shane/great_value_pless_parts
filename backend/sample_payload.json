@@ -1,0 +1,16 @@
+{
+  "geometry": {
+    "name": "Bracket-A",
+    "volume_cm3": 42.5,
+    "surface_area_cm2": 160.0,
+    "bounding_box": {
+      "x_mm": 80.0,
+      "y_mm": 60.0,
+      "z_mm": 25.0
+    },
+    "mass_kg": 0.115
+  },
+  "material": "aluminum_6061",
+  "quantity": 10,
+  "process": "cnc_milling"
+}
