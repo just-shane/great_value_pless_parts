@@ -20,25 +20,36 @@
 
       <section id="quote" hidden>
         <div class="price-card">
-          <span class="unit-price" id="unit-price">$0.00</span>
-          <span class="unit-label">per unit</span>
+          <div class="price-main">
+            <span class="unit-price" id="unit-price">$0.00</span>
+            <span class="unit-label">per unit &middot; qty <span id="quantity">—</span></span>
+          </div>
+          <span class="badge" id="confidence">—</span>
         </div>
 
         <div class="stat-row">
-          <div class="stat"><span class="k">Qty</span><span class="v" id="quantity">—</span></div>
           <div class="stat"><span class="k">Total</span><span class="v" id="total-price">—</span></div>
+          <div class="stat"><span class="k">Cycle</span><span class="v" id="cycle-time">—</span></div>
+          <div class="stat"><span class="k">Setup</span><span class="v" id="setup-time">—</span></div>
           <div class="stat"><span class="k">Lead</span><span class="v" id="lead-time">—</span></div>
         </div>
 
         <dl class="meta">
           <div><dt>Part</dt><dd id="part-name">—</dd></div>
           <div><dt>Material</dt><dd id="material">—</dd></div>
-          <div><dt>Process</dt><dd id="process">—</dd></div>
+          <div><dt>Machine</dt><dd id="machine">—</dd></div>
         </dl>
+
+        <h2>Quantity price breaks</h2>
+        <table class="breaks">
+          <thead><tr><th>Qty</th><th>Unit price</th></tr></thead>
+          <tbody id="price-breaks"></tbody>
+        </table>
 
         <h2>Cost breakdown</h2>
         <table class="line-items"><tbody id="line-items"></tbody></table>
 
+        <ul class="flags" id="flags"></ul>
         <ul class="notes" id="notes"></ul>
       </section>
     </main>

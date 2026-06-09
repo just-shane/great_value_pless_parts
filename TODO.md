@@ -8,21 +8,36 @@ off as they land.
 - [x] Research Paperless Parts' Fusion integration + the Fusion add-in API
 - [x] Repo layout, README, license, `.gitignore`
 - [x] FastAPI quoting backend: `/health`, `/api/v1/materials`, `/api/v1/quote`
-- [x] Naive pricing engine (material + machining + setup + markup + price breaks)
-- [x] Materials table (Al 6061, SS 304, 1018 steel, brass, Ti, ABS, Delrin)
 - [x] Fusion add-in skeleton: manifest, `run`/`stop`, command + button
 - [x] Geometry/property extractor from the active design
 - [x] HTTP client + palette to display the returned quote
 - [x] `sample_payload.json` so the API is testable without Fusion
 
+## ✅ Done (cost model v2 — TLK port)
+
+- [x] Replace the naive markup with the tlk-quoting-engine cost formula
+      `(machine + material + tooling + setup_amortized) × overhead / (1 − margin)`
+- [x] Machine types (mill / lathe / swiss) → setup time + stock model
+      (bbox for milling, bounding cylinder for turning)
+- [x] Material master with $/in³ rates + machinability + density
+- [x] Geometry-based cycle-time estimate (flagged, not a verified toolpath)
+- [x] Confidence levels + flags (geometry mode caps at `medium`)
+- [x] Quantity price-break curve (1 / 10 / 100 / 1000) in the response + palette
+- [x] Shop rates in `quote_params.json` with gitignored `quote_params.local.json`
+      override (keep real rates off the public repo)
+
 ## 🔜 Next up (MVP polish)
 
+- [ ] **Load the add-in in Fusion** and quote one real part end-to-end (the
+      "show the boss a working number" milestone)
+- [ ] **Operations mode**: accept a TLK `nodes`/`connections` graph and compute
+      cycle time from the operations → `high` confidence (the real integration)
 - [ ] Add 16×16 / 32×32 button icons under `commands/quote/resources/`
 - [ ] Quantity input in the palette + re-quote without re-clicking the button
 - [ ] Handle assemblies (sum/iterate occurrences, per-component quotes)
 - [ ] Graceful UX when the backend is unreachable (retry + clear error in palette)
 - [ ] Unit handling: respect the design's unit system (mm/in) end-to-end
-- [ ] Pull real material name → map to backend material keys (fuzzy match)
+- [x] Pull real material name → map to backend material keys (fuzzy match)
 
 ## 🛠️ Backend
 

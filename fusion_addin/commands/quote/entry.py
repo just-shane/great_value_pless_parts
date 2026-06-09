@@ -48,13 +48,15 @@ MATERIAL_CHOICES = [
     ("stainless_316", "Stainless Steel 316"),
     ("brass_360", "Brass 360"),
     ("titanium_ti6al4v", "Titanium Ti-6Al-4V"),
+    ("peek", "PEEK"),
     ("abs", "ABS Plastic"),
     ("delrin", "Delrin / Acetal"),
 ]
 
-PROCESS_CHOICES = [
-    ("cnc_milling", "CNC Milling"),
-    ("cnc_turning", "CNC Turning"),
+MACHINE_CHOICES = [
+    ("mill", "CNC Mill"),
+    ("lathe", "CNC Lathe (Turning)"),
+    ("swiss", "Swiss / Screw Machine"),
 ]
 
 # Handlers scoped to a single command invocation.
@@ -137,11 +139,11 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
         "quantity", "Quantity", 1, 100000, 1, config.DEFAULT_QUANTITY
     )
 
-    process_input = inputs.addDropDownCommandInput(
-        "process", "Process", adsk.core.DropDownStyles.TextListDropDownStyle
+    machine_input = inputs.addDropDownCommandInput(
+        "machine_type", "Machine", adsk.core.DropDownStyles.TextListDropDownStyle
     )
-    for index, (_key, label) in enumerate(PROCESS_CHOICES):
-        process_input.listItems.add(label, index == 0)
+    for index, (_key, label) in enumerate(MACHINE_CHOICES):
+        machine_input.listItems.add(label, index == 0)
 
     futil.add_handler(args.command.execute, command_execute, local_handlers=local_handlers)
     futil.add_handler(args.command.destroy, command_destroy, local_handlers=local_handlers)
@@ -152,7 +154,7 @@ def command_execute(args: adsk.core.CommandEventArgs):
     inputs = args.command.commandInputs
 
     material_key = _selected_key(inputs.itemById("material"), MATERIAL_CHOICES)
-    process_key = _selected_key(inputs.itemById("process"), PROCESS_CHOICES)
+    machine_key = _selected_key(inputs.itemById("machine_type"), MACHINE_CHOICES)
     quantity = inputs.itemById("quantity").value
 
     try:
@@ -168,7 +170,7 @@ def command_execute(args: adsk.core.CommandEventArgs):
         material = material_key
 
     try:
-        quote = api_client.request_quote(geometry, material, quantity, process_key)
+        quote = api_client.request_quote(geometry, material, quantity, machine_key)
     except RuntimeError as err:
         ui.messageBox(str(err), CMD_NAME)
         return

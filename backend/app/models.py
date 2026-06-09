@@ -7,9 +7,16 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 
-class Process(str, Enum):
-    cnc_milling = "cnc_milling"
-    cnc_turning = "cnc_turning"
+class MachineType(str, Enum):
+    mill = "mill"
+    lathe = "lathe"
+    swiss = "swiss"
+
+
+class Confidence(str, Enum):
+    high = "high"
+    medium = "medium"
+    low = "low"
 
 
 class BoundingBox(BaseModel):
@@ -18,10 +25,6 @@ class BoundingBox(BaseModel):
     x_mm: float = Field(gt=0, description="Length along X (mm)")
     y_mm: float = Field(gt=0, description="Length along Y (mm)")
     z_mm: float = Field(gt=0, description="Length along Z (mm)")
-
-    @property
-    def volume_cm3(self) -> float:
-        return (self.x_mm * self.y_mm * self.z_mm) / 1000.0
 
 
 class PartGeometry(BaseModel):
@@ -38,7 +41,7 @@ class QuoteRequest(BaseModel):
     geometry: PartGeometry
     material: str = Field(default="aluminum_6061", description="Material key or name")
     quantity: int = Field(default=1, ge=1, le=100_000)
-    process: Process = Field(default=Process.cnc_milling)
+    machine_type: MachineType = Field(default=MachineType.mill)
 
 
 class LineItem(BaseModel):
@@ -47,20 +50,33 @@ class LineItem(BaseModel):
     detail: str | None = None
 
 
+class PriceBreak(BaseModel):
+    qty: int
+    unit_price: float
+
+
 class QuoteResponse(BaseModel):
     part_name: str
     material: str
-    process: Process
+    machine_type: MachineType
     quantity: int
+    currency: str = "USD"
 
     unit_price: float
     total_price: float
-    lead_time_days: int
-    currency: str = "USD"
 
+    estimated_cycle_time_sec: float
+    setup_time_min: float
+    lead_time_days: int
+    confidence: Confidence
+
+    price_breaks: list[PriceBreak]
     line_items: list[LineItem]
+    flags: list[str] = []
     notes: list[str] = []
+
     disclaimer: str = (
-        "Great Value grade estimate. Not affiliated with Paperless Parts. "
-        "Do not use to bid real work."
+        "Off-brand estimate. Cost model ported from tlk-quoting-engine; cycle "
+        "time is estimated from CAD geometry, not a verified toolpath. Confirm "
+        "against CAM before issuing a firm quote."
     )

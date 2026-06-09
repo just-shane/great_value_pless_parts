@@ -9,12 +9,14 @@ from . import __version__
 from .materials import MATERIALS
 from .models import QuoteRequest, QuoteResponse
 from .pricing import estimate
+from .shop import PARAMS
 
 app = FastAPI(
     title="Great Value Pless Parts — Quoting API",
     description=(
         "Off-brand instant quoting backend. Receives part geometry and returns a "
-        "toy machining cost estimate. Not affiliated with Paperless Parts."
+        "machining cost estimate using a cost model ported from tlk-quoting-engine. "
+        "Not affiliated with Paperless Parts."
     ),
     version=__version__,
 )
@@ -33,17 +35,23 @@ def health() -> dict:
     return {"status": "ok", "version": __version__}
 
 
+@app.get("/api/v1/params")
+def shop_params() -> dict:
+    """Return the shop-level rate configuration driving the quotes."""
+    return {k: v for k, v in PARAMS.items() if not k.startswith("_")}
+
+
 @app.get("/api/v1/materials")
 def list_materials() -> dict:
-    """Return the supported materials and their reference properties."""
+    """Return the material master and its reference properties."""
     return {
         "materials": [
             {
                 "key": m.key,
                 "name": m.name,
-                "density_g_cm3": m.density,
-                "cost_per_kg_usd": m.cost_per_kg,
+                "rate_usd_per_in3": m.rate_usd_per_in3,
                 "machinability": m.machinability,
+                "density_lb_in3": m.density_lb_in3,
             }
             for m in MATERIALS.values()
         ]

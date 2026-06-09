@@ -32,6 +32,9 @@ desktop.ini
 .env
 *.local
 
+# Real shop rates stay local, never in a public repo
+quote_params.local.json
+
 # Claude Code local tooling config
 .claude/
 

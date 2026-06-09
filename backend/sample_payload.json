@@ -12,5 +12,5 @@
   },
   "material": "aluminum_6061",
   "quantity": 10,
-  "process": "cnc_milling"
+  "machine_type": "mill"
 }

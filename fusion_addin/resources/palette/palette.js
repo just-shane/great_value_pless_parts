@@ -13,14 +13,19 @@ function money(value, currency) {
   return prefix + n.toFixed(2);
 }
 
-var PROCESS_LABELS = {
-  cnc_milling: "CNC Milling",
-  cnc_turning: "CNC Turning",
+var MACHINE_LABELS = {
+  mill: "CNC Mill",
+  lathe: "CNC Lathe (Turning)",
+  swiss: "Swiss / Screw Machine",
 };
 
 function setText(id, text) {
   var el = document.getElementById(id);
   if (el) el.textContent = text;
+}
+
+function humanize(token) {
+  return String(token).replace(/_/g, " ");
 }
 
 function renderQuote(q) {
@@ -30,11 +35,36 @@ function renderQuote(q) {
   setText("unit-price", money(q.unit_price, q.currency));
   setText("quantity", q.quantity);
   setText("total-price", money(q.total_price, q.currency));
+  setText("cycle-time", (Number(q.estimated_cycle_time_sec || 0) / 60).toFixed(1) + " min");
+  setText("setup-time", Number(q.setup_time_min || 0).toFixed(0) + " min");
   setText("lead-time", q.lead_time_days + " days");
   setText("part-name", q.part_name);
   setText("material", q.material);
-  setText("process", PROCESS_LABELS[q.process] || q.process);
+  setText("machine", MACHINE_LABELS[q.machine_type] || q.machine_type);
 
+  // Confidence badge
+  var badge = document.getElementById("confidence");
+  var conf = (q.confidence || "").toLowerCase();
+  badge.textContent = conf ? conf + " confidence" : "—";
+  badge.className = "badge badge--" + (conf || "medium");
+
+  // Quantity price breaks (highlight the requested qty)
+  var breaksBody = document.getElementById("price-breaks");
+  breaksBody.innerHTML = "";
+  (q.price_breaks || []).forEach(function (b) {
+    var tr = document.createElement("tr");
+    if (b.qty === q.quantity) tr.className = "is-current";
+    var qtyCell = document.createElement("td");
+    qtyCell.textContent = b.qty;
+    var priceCell = document.createElement("td");
+    priceCell.className = "br-price";
+    priceCell.textContent = money(b.unit_price, q.currency);
+    tr.appendChild(qtyCell);
+    tr.appendChild(priceCell);
+    breaksBody.appendChild(tr);
+  });
+
+  // Cost breakdown
   var tbody = document.getElementById("line-items");
   tbody.innerHTML = "";
   (q.line_items || []).forEach(function (li) {
@@ -59,6 +89,17 @@ function renderQuote(q) {
     tbody.appendChild(tr);
   });
 
+  // Flags (chips)
+  var flags = document.getElementById("flags");
+  flags.innerHTML = "";
+  (q.flags || []).forEach(function (f) {
+    var li = document.createElement("li");
+    li.className = "flag";
+    li.textContent = humanize(f);
+    flags.appendChild(li);
+  });
+
+  // Notes
   var notes = document.getElementById("notes");
   notes.innerHTML = "";
   (q.notes || []).forEach(function (note) {

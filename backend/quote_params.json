@@ -1,0 +1,29 @@
+{
+  "_comment": "EXAMPLE shop-level rate config — illustrative, industry-typical values only. Put your real shop rates in quote_params.local.json (gitignored) so they stay off public GitHub. Per-material rates live in app/materials.py.",
+
+  "machine_hourly_rate_usd": 95.00,
+  "setup_time_minutes": {
+    "swiss": 20,
+    "lathe": 15,
+    "mill": 30
+  },
+  "tooling_amortization_per_cycle_usd": 0.08,
+  "overhead_multiplier": 1.25,
+  "margin_percent": 35,
+  "stock_waste_factor": 0.15,
+
+  "cycle_time_estimation": {
+    "_comment": "GVPP estimates cycle time from CAD geometry (TLK derives it from the operation graph instead). These knobs are intentionally conservative; the resulting time is flagged 'estimated_from_geometry'.",
+    "base_mrr_in3_per_min": 1.0,
+    "lathe_mrr_multiplier": 1.3,
+    "finish_seconds_per_in2": 1.5,
+    "handling_seconds": 30
+  },
+
+  "lead_time": {
+    "base_days": 5,
+    "days_per_25_units": 1,
+    "hard_material_penalty_days": 3,
+    "low_confidence_penalty_days": 2
+  }
+}

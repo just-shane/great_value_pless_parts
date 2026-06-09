@@ -23,7 +23,7 @@ enterprise price tag, and ~0% of the accuracy guarantee. 😄
 | Paperless Parts (the real thing) | Great Value Pless Parts (this) |
 | --- | --- |
 | Push CAD from Fusion to a cloud quoting platform | Push part metadata to a local FastAPI service |
-| AI-driven manufacturability + costing | Naive volume/material/MRR heuristics |
+| AI-driven manufacturability + costing | Real job-shop cost model, cycle time estimated from geometry |
 | Enterprise sales, SOC 2, the works | A `README`, an MIT license, and vibes |
 
 The actual feature loop:
@@ -128,20 +128,41 @@ curl -X POST http://127.0.0.1:8000/api/v1/quote `
 
 ---
 
-## How the (fake) pricing works
+## How the pricing works
 
-The estimator is intentionally simple and lives in
-[`backend/app/pricing.py`](backend/app/pricing.py):
+The estimator in [`backend/app/pricing.py`](backend/app/pricing.py) uses a real
+job-shop cost model (per-piece price falls as setup amortizes over quantity):
 
-- **Material cost** — bounding-box stock volume × waste factor × density × `$/kg`.
-- **Machining cost** — removed volume ÷ material removal rate (scaled by a
-  per-material machinability factor), plus a surface-area complexity term, billed
-  at a shop hourly rate.
-- **Setup cost** — a flat per-setup charge, amortized over the order quantity.
-- **Markup + price breaks** — a margin multiplier, with the per-unit price
-  dropping as quantity rises (setup amortization + a small volume discount).
+```
+                  (machine + material + tooling + setup_amortized) × overhead
+price_per_piece = ───────────────────────────────────────────────────────────
+                                       (1 − margin)
 
-It is *good enough to look real and nowhere near good enough to bid real work.*
+  machine_cost    = cycle_time_sec / 3600 × machine_hourly_rate
+  material_cost   = stock_volume_in³ × material_rate_per_in³
+  setup_amortized = (setup_min / 60 × hourly_rate) / order_qty
+```
+
+- **Shop rates** (hourly rate, setup time per machine type, tooling, overhead,
+  margin, stock waste) come from [`backend/quote_params.json`](backend/quote_params.json).
+  The committed file holds **illustrative example values** — put your real shop
+  rates in `backend/quote_params.local.json` (gitignored) so they never hit a
+  public repo.
+- **Material rates** ($/in³ + machinability) live in the material master,
+  [`backend/app/materials.py`](backend/app/materials.py).
+- **Machine type** (`mill` / `lathe` / `swiss`) sets the setup time and the
+  stock model (bounding box for milling, bounding cylinder for turning/Swiss).
+- **Cycle time is estimated from CAD geometry** (removed volume + surface area),
+  *not* a verified toolpath — so the engine returns a `confidence` level
+  (capped at `medium` in geometry mode) and `flags` such as
+  `cycle_time_estimated_from_geometry`. Confirm against CAM before issuing a
+  firm quote.
+
+The quote response also includes a **quantity price-break curve** (qty 1 / 10 /
+100 / 1000) so you can see the setup-amortization effect at a glance.
+
+> The cost *model* is sound; the *cycle-time input* is a geometry estimate.
+> Treat quotes as a fast first pass for review, not a binding bid.
 
 ---
 

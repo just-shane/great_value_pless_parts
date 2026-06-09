@@ -11,7 +11,7 @@ import urllib.request
 from .. import config
 
 
-def request_quote(geometry: dict, material: str, quantity: int, process: str) -> dict:
+def request_quote(geometry: dict, material: str, quantity: int, machine_type: str) -> dict:
     """POST a part to the backend and return the parsed quote.
 
     Raises ``RuntimeError`` with a readable message on any network/HTTP failure.
@@ -21,7 +21,7 @@ def request_quote(geometry: dict, material: str, quantity: int, process: str) ->
         "geometry": geometry,
         "material": material,
         "quantity": quantity,
-        "process": process,
+        "machine_type": machine_type,
     }
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
