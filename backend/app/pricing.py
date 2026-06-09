@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import math
 
+from . import speeds_feeds
 from .materials import Material, resolve_material
 from .models import (
     Confidence,
@@ -28,6 +29,7 @@ from .models import (
     QuoteRequest,
     QuoteResponse,
 )
+from .operations import OperationDetail, cycle_time_seconds
 from .shop import PARAMS
 
 # Unit conversions (Fusion/wire units are metric; the cost model is imperial).
@@ -140,9 +142,35 @@ def estimate(request: QuoteRequest) -> QuoteResponse:
         stock_in3 = part_in3 * (1.0 + waste)
     removed_in3 = max(stock_in3 - part_in3, 0.0)
 
+    # --- Cycle time: operations mode (live speeds & feeds) or geometry --------
+    op_details: list[OperationDetail] = []
+    extra_flags: list[str] = []
+    cycle_source = "geometry_estimate"
+    machine_detail_suffix = "cycle est. from geometry"
+    ops_mode = False
+
+    if request.operations:
+        sf = speeds_feeds.lookup(material.key)
+        if sf is not None:
+            cycle_sec, op_details = cycle_time_seconds(
+                request.operations, sf.sfm, sf.feed_per_rev, p["operations"]
+            )
+            ops_mode = True
+            cycle_source = f"operations:{sf.source}"
+            machine_detail_suffix = (
+                f"{len(op_details)} ops @ {sf.sfm:.0f} SFM / {sf.feed_per_rev:.4f} ipr "
+                f"({sf.material_category}, live)"
+            )
+            extra_flags.append("cycle_time_from_operations")
+            extra_flags.append(f"speeds_feeds:{sf.source}(n={sf.sample_size})")
+        else:
+            cycle_sec = _cycle_time_sec(removed_in3, area_in2, material.machinability, machine_type, cycle_cfg)
+            extra_flags.append("speeds_feeds_unavailable_used_geometry")
+    else:
+        cycle_sec = _cycle_time_sec(removed_in3, area_in2, material.machinability, machine_type, cycle_cfg)
+
     # --- Cost components ------------------------------------------------------
     material_cost = stock_in3 * material.rate_usd_per_in3
-    cycle_sec = _cycle_time_sec(removed_in3, area_in2, material.machinability, machine_type, cycle_cfg)
     machine_cost = (cycle_sec / 3600.0) * hourly_rate
 
     # --- Price + breaks -------------------------------------------------------
@@ -164,7 +192,7 @@ def estimate(request: QuoteRequest) -> QuoteResponse:
         LineItem(
             label="Machine time",
             amount=_round2(machine_cost),
-            detail=f"{cycle_sec / 60.0:.1f} min cycle @ ${hourly_rate:.0f}/hr (cycle est. from geometry)",
+            detail=f"{cycle_sec / 60.0:.1f} min cycle @ ${hourly_rate:.0f}/hr ({machine_detail_suffix})",
         ),
         LineItem(
             label="Material",
@@ -194,9 +222,17 @@ def estimate(request: QuoteRequest) -> QuoteResponse:
     ]
 
     # --- Confidence, flags, lead time, notes ----------------------------------
-    removed_ratio = removed_in3 / stock_in3 if stock_in3 else 0.0
-    area_to_volume = area_in2 / part_in3 if part_in3 else 0.0
-    confidence, flags = _confidence_and_flags(material, removed_ratio, area_to_volume)
+    if ops_mode:
+        # Real ops + live speeds/feeds: cycle time is measured, not guessed.
+        flags = ["tolerances_unknown_assumed_standard", *extra_flags]
+        if material.machinability < 0.40:
+            flags.append("hard_material_verify_tooling")
+        confidence = Confidence.high
+    else:
+        removed_ratio = removed_in3 / stock_in3 if stock_in3 else 0.0
+        area_to_volume = area_in2 / part_in3 if part_in3 else 0.0
+        confidence, flags = _confidence_and_flags(material, removed_ratio, area_to_volume)
+        flags.extend(extra_flags)
 
     lead = p["lead_time"]
     lead_time_days = (
@@ -206,9 +242,20 @@ def estimate(request: QuoteRequest) -> QuoteResponse:
         + (lead["low_confidence_penalty_days"] if confidence is Confidence.low else 0)
     )
 
-    notes: list[str] = [
-        "Cycle time is estimated from CAD geometry - confirm against CAM for a firm quote.",
-    ]
+    notes: list[str] = []
+    if ops_mode:
+        notes.append(
+            "Cycle time computed from the operation graph using live Datum speeds & feeds."
+        )
+    else:
+        notes.append(
+            "Cycle time is estimated from CAD geometry - confirm against CAM for a firm quote."
+        )
+        if request.operations:
+            notes.append(
+                "Operations were supplied but the speeds & feeds DB was unreachable; "
+                "fell back to a geometry estimate."
+            )
     if qty == 1:
         notes.append("Single piece: setup dominates. Per-unit price drops sharply with quantity.")
     if confidence is Confidence.low:
@@ -222,11 +269,13 @@ def estimate(request: QuoteRequest) -> QuoteResponse:
         unit_price=unit_price,
         total_price=total_price,
         estimated_cycle_time_sec=round(cycle_sec, 1),
+        cycle_time_source=cycle_source,
         setup_time_min=float(setup_min),
         lead_time_days=lead_time_days,
         confidence=confidence,
         price_breaks=price_breaks,
         line_items=line_items,
+        operation_details=op_details,
         flags=flags,
         notes=notes,
     )

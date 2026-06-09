@@ -164,6 +164,29 @@ The quote response also includes a **quantity price-break curve** (qty 1 / 10 /
 > The cost *model* is sound; the *cycle-time input* is a geometry estimate.
 > Treat quotes as a fast first pass for review, not a binding bid.
 
+### Operations mode (live speeds & feeds → high confidence)
+
+Geometry mode guesses cycle time. **Operations mode computes it.** If the request
+includes an `operations` list (turning ops mirroring the TLK node set —
+`turn` / `face` / `drill` / `groove` / `thread` / `cutoff`), the engine pulls
+**live surface-speed + feed-per-rev** for the material from a Supabase
+speeds-&-feeds database (`cutting_presets`) and runs real machining math:
+
+```
+rpm  = SFM × 12 / (π × cutting_dia)
+time = length / (feed_per_rev × rpm)      → summed per operation
+```
+
+Cycle time becomes a calculation instead of a guess, so confidence rises to
+`high` and the response includes a per-operation breakdown (rpm + seconds each).
+
+Credentials are **never** committed — copy
+[`backend/supabase.local.example.json`](backend/supabase.local.example.json) to
+`backend/supabase.local.json` (gitignored) and add your Supabase URL +
+service-role key, or set `DATUM_SUPABASE_URL` / `DATUM_SUPABASE_KEY`. If the DB
+is unreachable, the quote falls back to a geometry estimate and says so via a
+flag. Try it: `curl -X POST .../api/v1/quote -d @backend/sample_payload_ops.json`.
+
 ---
 
 ## Roadmap

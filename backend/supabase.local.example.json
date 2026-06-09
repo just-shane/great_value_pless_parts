@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy this file to 'supabase.local.json' (gitignored) and fill in your Datum Supabase URL + a service_role key. Operations mode reads live speeds & feeds from the cutting_presets table. Alternatively set env vars DATUM_SUPABASE_URL and DATUM_SUPABASE_KEY.",
+  "url": "https://YOUR-PROJECT-REF.supabase.co",
+  "service_key": "YOUR_SERVICE_ROLE_KEY"
+}

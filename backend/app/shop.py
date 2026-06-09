@@ -22,6 +22,15 @@ DEFAULTS: dict = {
         "finish_seconds_per_in2": 1.5,
         "handling_seconds": 30,
     },
+    "operations": {
+        "max_rpm": 10000,
+        "index_seconds": 2.0,
+        "drill_feed_factor": 0.6,
+        "groove_feed_factor": 0.5,
+        "cutoff_feed_factor": 0.5,
+        "peck_penalty": 0.4,
+        "thread_retract_seconds": 1.0,
+    },
     "lead_time": {
         "base_days": 5,
         "days_per_25_units": 1,

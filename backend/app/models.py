@@ -6,6 +6,8 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from .operations import Operation, OperationDetail
+
 
 class MachineType(str, Enum):
     mill = "mill"
@@ -42,6 +44,11 @@ class QuoteRequest(BaseModel):
     material: str = Field(default="aluminum_6061", description="Material key or name")
     quantity: int = Field(default=1, ge=1, le=100_000)
     machine_type: MachineType = Field(default=MachineType.mill)
+    operations: list[Operation] | None = Field(
+        default=None,
+        description="Optional turning op graph; when present, cycle time is "
+        "computed from these ops using live speeds & feeds (high confidence).",
+    )
 
 
 class LineItem(BaseModel):
@@ -66,12 +73,14 @@ class QuoteResponse(BaseModel):
     total_price: float
 
     estimated_cycle_time_sec: float
+    cycle_time_source: str = "geometry_estimate"
     setup_time_min: float
     lead_time_days: int
     confidence: Confidence
 
     price_breaks: list[PriceBreak]
     line_items: list[LineItem]
+    operation_details: list[OperationDetail] = []
     flags: list[str] = []
     notes: list[str] = []
 

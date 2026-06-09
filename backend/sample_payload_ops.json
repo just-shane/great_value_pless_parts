@@ -1,0 +1,20 @@
+{
+  "geometry": {
+    "name": "00 DBF-1017985 MASTER (firing pin)",
+    "volume_cm3": 0.0769,
+    "surface_area_cm2": 1.286,
+    "bounding_box": { "x_mm": 3.988, "y_mm": 3.988, "z_mm": 13.005 },
+    "mass_kg": 0.0006
+  },
+  "material": "steel_1018",
+  "quantity": 100,
+  "machine_type": "swiss",
+  "operations": [
+    { "type": "face",   "label": "Face stock",        "dia_in": 0.157 },
+    { "type": "turn",   "label": "Rough OD",          "dia_in": 0.157, "length_in": 0.512, "passes": 2 },
+    { "type": "turn",   "label": "Finish shank",      "dia_in": 0.090, "length_in": 0.180, "passes": 1 },
+    { "type": "groove", "label": "Relief groove",     "dia_in": 0.157, "depth_in": 0.030, "width_in": 0.040 },
+    { "type": "drill",  "label": "Center drill tip",  "dia_in": 0.060, "depth_in": 0.120, "peck": true },
+    { "type": "cutoff", "label": "Part off",          "dia_in": 0.157 }
+  ]
+}

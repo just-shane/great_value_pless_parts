@@ -26,12 +26,24 @@ off as they land.
 - [x] Shop rates in `quote_params.json` with gitignored `quote_params.local.json`
       override (keep real rates off the public repo)
 
+## ✅ Done (operations mode — live speeds & feeds)
+
+- [x] Validated the extractor live against a real part via the Fusion MCP
+      (firing pin: 0.157 dia × 0.512 long, steel)
+- [x] **Operations mode**: turning op set (turn/face/drill/groove/thread/cutoff)
+      → cycle time from real machining math → `high` confidence
+- [x] Live speeds & feeds from the Datum Supabase `cutting_presets` table
+      (median SFM + feed/rev per material), creds in gitignored local config
+- [x] Per-operation breakdown (rpm + seconds) in the response
+- [x] Graceful fallback to geometry estimate when the DB is unreachable (flagged)
+
 ## 🔜 Next up (MVP polish)
 
-- [ ] **Load the add-in in Fusion** and quote one real part end-to-end (the
-      "show the boss a working number" milestone)
-- [ ] **Operations mode**: accept a TLK `nodes`/`connections` graph and compute
-      cycle time from the operations → `high` confidence (the real integration)
+- [ ] **Load the add-in in Fusion** as an actual add-in (extractor already
+      proven live via MCP) and quote a part end-to-end through the palette
+- [ ] **Read CAM ops straight from Fusion** — if the doc has CAM setups, pull the
+      real operations (and Fusion's own cycle times) instead of a supplied graph
+- [ ] Milling operations in ops mode (profile/pocket via path length or MRR)
 - [ ] Add 16×16 / 32×32 button icons under `commands/quote/resources/`
 - [ ] Quantity input in the palette + re-quote without re-clicking the button
 - [ ] Handle assemblies (sum/iterate occurrences, per-component quotes)

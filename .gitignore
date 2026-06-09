@@ -35,6 +35,9 @@ desktop.ini
 # Real shop rates stay local, never in a public repo
 quote_params.local.json
 
+# Datum Supabase credentials (speeds & feeds) — local only
+supabase.local.json
+
 # Claude Code local tooling config
 .claude/
 
