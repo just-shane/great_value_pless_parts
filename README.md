@@ -167,10 +167,12 @@ The quote response also includes a **quantity price-break curve** (qty 1 / 10 /
 ### Operations mode (live speeds & feeds → high confidence)
 
 Geometry mode guesses cycle time. **Operations mode computes it.** If the request
-includes an `operations` list (turning ops mirroring the TLK node set —
-`turn` / `face` / `drill` / `groove` / `thread` / `cutoff`), the engine pulls
+includes an `operations` list — turning ops mirroring the TLK node set
+(`turn` / `face` / `drill` / `groove` / `thread` / `cutoff`) and milling ops
+(`mill_profile` / `mill_pocket` / `mill_face`) — the engine pulls
 **live surface-speed + feed-per-rev** for the material from a Supabase
-speeds-&-feeds database (`cutting_presets`) and runs real machining math:
+speeds-&-feeds database (`cutting_presets`) and runs real machining math
+(turning is feed-per-rev based; milling is path-length × feed-rate based):
 
 ```
 rpm  = SFM × 12 / (π × cutting_dia)

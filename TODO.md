@@ -53,8 +53,10 @@ off as they land.
 - [ ] **Load the add-in in Fusion** as an actual add-in and quote end-to-end
       through the palette
 - [ ] Map CAM tool material/setup stock → backend material + stock automatically
-- [ ] Milling operations in pure ops mode (no CAM): profile/pocket via path/MRR
+- [x] Milling operations in pure ops mode (no CAM): mill_profile / mill_pocket /
+      mill_face via path-length × feed-rate (sample_payload_milling.json)
 - [ ] Add 16×16 / 32×32 button icons under `commands/quote/resources/`
+- [ ] Sync/parallel-channel modeling for Swiss (main + sub spindle overlap)
 - [ ] Quantity input in the palette + re-quote without re-clicking the button
 - [ ] Handle assemblies (sum/iterate occurrences, per-component quotes)
 - [ ] Graceful UX when the backend is unreachable (retry + clear error in palette)

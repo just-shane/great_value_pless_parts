@@ -1,0 +1,18 @@
+{
+  "geometry": {
+    "name": "Manifold-Plate",
+    "volume_cm3": 180.0,
+    "surface_area_cm2": 320.0,
+    "bounding_box": { "x_mm": 101.6, "y_mm": 76.2, "z_mm": 25.4 },
+    "mass_kg": 0.486
+  },
+  "material": "aluminum_6061",
+  "quantity": 10,
+  "machine_type": "mill",
+  "operations": [
+    { "type": "mill_face",    "label": "Face top",        "dia_in": 2.0,  "area_in2": 12.4, "depth_in": 0.02, "stepdown_in": 0.02, "stepover": 0.7 },
+    { "type": "mill_profile", "label": "Profile outline", "dia_in": 0.5,  "length_in": 14.0, "depth_in": 1.0, "stepdown_in": 0.125 },
+    { "type": "mill_pocket",  "label": "Clear pocket",    "dia_in": 0.375, "area_in2": 4.0,  "depth_in": 0.4, "stepdown_in": 0.1, "stepover": 0.5 },
+    { "type": "drill",        "label": "Drill 6 holes",   "dia_in": 0.25, "depth_in": 1.0,  "passes": 6, "peck": true }
+  ]
+}

@@ -18,13 +18,19 @@ from pydantic import BaseModel, Field
 
 
 class OperationType(str, Enum):
+    # Turning / Swiss
     turn = "turn"
     face = "face"
     drill = "drill"
     groove = "groove"
     thread = "thread"
     cutoff = "cutoff"
-    mill = "mill"      # generic milling op (cycle time comes from CAM, not a formula)
+    # Milling (computed from path length × feed rate)
+    mill_profile = "mill_profile"   # contour along a perimeter
+    mill_pocket = "mill_pocket"     # area/volume clearing
+    mill_face = "mill_face"         # facing a top surface
+    # Generic (cycle time must come from CAM, no formula)
+    mill = "mill"
     other = "other"
 
 
@@ -43,8 +49,12 @@ class Operation(BaseModel):
     depth_in: float | None = Field(default=None, ge=0, description="Drill/groove depth")
     width_in: float | None = Field(default=None, ge=0, description="Groove width")
     pitch_in: float | None = Field(default=None, gt=0, description="Thread pitch (in/rev)")
-    passes: int = Field(default=1, ge=1)
+    passes: int = Field(default=1, ge=1, description="Passes (turning) or hole count (drill)")
     peck: bool = False
+    # Milling parameters
+    area_in2: float | None = Field(default=None, ge=0, description="Pocket/face area to clear")
+    stepdown_in: float | None = Field(default=None, gt=0, description="Axial depth per pass")
+    stepover: float = Field(default=0.5, gt=0, le=1, description="Radial stepover (fraction of tool dia)")
     cycle_time_sec: float | None = Field(
         default=None, ge=0, description="Precomputed cycle time (e.g. from Fusion CAM)"
     )
@@ -61,6 +71,13 @@ def _rpm(sfm: float, dia_in: float | None, max_rpm: float) -> float:
     if not dia_in or dia_in <= 0:
         return max_rpm
     return min(sfm * 12.0 / (math.pi * dia_in), max_rpm)
+
+
+def _levels(depth_in: float | None, stepdown_in: float | None) -> int:
+    """Number of axial passes to reach ``depth_in`` at ``stepdown_in`` per pass."""
+    if not depth_in or depth_in <= 0 or not stepdown_in or stepdown_in <= 0:
+        return 1
+    return max(1, math.ceil(depth_in / stepdown_in))
 
 
 def cycle_time_seconds(
@@ -105,9 +122,10 @@ def cycle_time_seconds(
         elif op.type is OperationType.face:
             seconds = ((op.dia_in or 0.0) / 2.0) / feed * 60.0
         elif op.type is OperationType.drill:
-            seconds = (op.depth_in or 0.0) / max(feed * drill_factor, 1e-9) * 60.0
+            per_hole = (op.depth_in or 0.0) / max(feed * drill_factor, 1e-9) * 60.0
             if op.peck:
-                seconds *= 1.0 + peck_penalty
+                per_hole *= 1.0 + peck_penalty
+            seconds = op.passes * per_hole  # passes == hole count
         elif op.type is OperationType.groove:
             seconds = (op.depth_in or 0.0) / max(feed * groove_factor, 1e-9) * 60.0
         elif op.type is OperationType.thread:
@@ -116,6 +134,18 @@ def cycle_time_seconds(
             seconds += op.passes * thread_retract
         elif op.type is OperationType.cutoff:
             seconds = ((op.dia_in or 0.0) / 2.0) / max(feed * cutoff_factor, 1e-9) * 60.0
+        elif op.type is OperationType.mill_profile:
+            # Contour: perimeter length × (axial passes) ÷ feed rate.
+            levels = _levels(op.depth_in, op.stepdown_in)
+            cutting_len = (op.length_in or 0.0) * levels * op.passes
+            seconds = cutting_len / feed * 60.0
+        elif op.type in (OperationType.mill_pocket, OperationType.mill_face):
+            # Area clearing: pass spacing = stepover × tool dia; cover the area
+            # at each axial level. path_len ≈ area / spacing.
+            spacing = max(op.stepover, 0.05) * (op.dia_in or 0.25)
+            path_per_level = (op.area_in2 or 0.0) / max(spacing, 1e-9)
+            levels = _levels(op.depth_in, op.stepdown_in)
+            seconds = path_per_level * levels / feed * 60.0
 
         seconds += index_sec  # tool index / approach per op
         total += seconds
