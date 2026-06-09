@@ -37,13 +37,23 @@ off as they land.
 - [x] Per-operation breakdown (rpm + seconds) in the response
 - [x] Graceful fallback to geometry estimate when the DB is unreachable (flagged)
 
+## ✅ Done (Fusion CAM cycle times)
+
+- [x] **Read CAM ops straight from Fusion** — `cam_extractor.py` pulls each op's
+      `strategyType` + Fusion `machiningTime` via `CAM.getMachiningTime`
+- [x] Backend ops carry optional `cycle_time_sec`; source resolves to
+      `fusion_cam` / `datum_supabase` / `mixed`; DB skipped when CAM times present
+- [x] Add-in tries CAM first, falls back to geometry; verified live (graceful
+      "no CAM" on the design-only firing-pin doc)
+
 ## 🔜 Next up (MVP polish)
 
-- [ ] **Load the add-in in Fusion** as an actual add-in (extractor already
-      proven live via MCP) and quote a part end-to-end through the palette
-- [ ] **Read CAM ops straight from Fusion** — if the doc has CAM setups, pull the
-      real operations (and Fusion's own cycle times) instead of a supplied graph
-- [ ] Milling operations in ops mode (profile/pocket via path length or MRR)
+- [ ] **Test CAM extraction on a real programmed part** (open a doc with
+      generated toolpaths and confirm the live machining times come through)
+- [ ] **Load the add-in in Fusion** as an actual add-in and quote end-to-end
+      through the palette
+- [ ] Map CAM tool material/setup stock → backend material + stock automatically
+- [ ] Milling operations in pure ops mode (no CAM): profile/pocket via path/MRR
 - [ ] Add 16×16 / 32×32 button icons under `commands/quote/resources/`
 - [ ] Quantity input in the palette + re-quote without re-clicking the button
 - [ ] Handle assemblies (sum/iterate occurrences, per-component quotes)

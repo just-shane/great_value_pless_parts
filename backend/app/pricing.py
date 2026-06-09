@@ -150,22 +150,40 @@ def estimate(request: QuoteRequest) -> QuoteResponse:
     ops_mode = False
 
     if request.operations:
-        sf = speeds_feeds.lookup(material.key)
-        if sf is not None:
-            cycle_sec, op_details = cycle_time_seconds(
-                request.operations, sf.sfm, sf.feed_per_rev, p["operations"]
-            )
-            ops_mode = True
-            cycle_source = f"operations:{sf.source}"
-            machine_detail_suffix = (
-                f"{len(op_details)} ops @ {sf.sfm:.0f} SFM / {sf.feed_per_rev:.4f} ipr "
-                f"({sf.material_category}, live)"
-            )
-            extra_flags.append("cycle_time_from_operations")
-            extra_flags.append(f"speeds_feeds:{sf.source}(n={sf.sample_size})")
-        else:
+        ops = request.operations
+        # Ops carrying their own cycle_time_sec (e.g. from Fusion CAM) don't need
+        # the speeds/feeds DB; only look it up if something must be computed.
+        need_speeds = any(op.cycle_time_sec is None for op in ops)
+        sf = speeds_feeds.lookup(material.key) if need_speeds else None
+
+        if need_speeds and sf is None:
             cycle_sec = _cycle_time_sec(removed_in3, area_in2, material.machinability, machine_type, cycle_cfg)
             extra_flags.append("speeds_feeds_unavailable_used_geometry")
+        else:
+            sfm = sf.sfm if sf else 0.0
+            feed = sf.feed_per_rev if sf else 0.0
+            cycle_sec, op_details = cycle_time_seconds(ops, sfm, feed, p["operations"])
+            ops_mode = True
+            extra_flags.append("cycle_time_from_operations")
+
+            n_cam = sum(1 for op in ops if op.cycle_time_sec is not None)
+            if n_cam == len(ops):
+                cycle_source = "operations:fusion_cam"
+                machine_detail_suffix = f"{len(ops)} CAM ops (Fusion machining time)"
+                extra_flags.append("cycle_time_from_fusion_cam")
+            elif n_cam == 0:
+                cycle_source = f"operations:{sf.source}"
+                machine_detail_suffix = (
+                    f"{len(ops)} ops @ {sf.sfm:.0f} SFM / {sf.feed_per_rev:.4f} ipr "
+                    f"({sf.material_category}, live)"
+                )
+                extra_flags.append(f"speeds_feeds:{sf.source}(n={sf.sample_size})")
+            else:
+                cycle_source = f"operations:mixed(cam+{sf.source})" if sf else "operations:mixed"
+                machine_detail_suffix = f"{len(ops)} ops ({n_cam} from CAM, rest computed)"
+                extra_flags.append("cycle_time_from_fusion_cam")
+                if sf:
+                    extra_flags.append(f"speeds_feeds:{sf.source}(n={sf.sample_size})")
     else:
         cycle_sec = _cycle_time_sec(removed_in3, area_in2, material.machinability, machine_type, cycle_cfg)
 

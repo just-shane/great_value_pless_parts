@@ -10,7 +10,7 @@ import os
 import adsk.core
 
 from ... import config
-from ...lib import api_client, extractor
+from ...lib import api_client, cam_extractor, extractor
 from ...lib import fusionAddInUtils as futil
 
 app = adsk.core.Application.get()
@@ -169,8 +169,19 @@ def command_execute(args: adsk.core.CommandEventArgs):
     else:
         material = material_key
 
+    # If the document has CAM toolpaths, send the real operations (with Fusion's
+    # machining times) so the backend prices from measured cycle time.
+    operations = None
     try:
-        quote = api_client.request_quote(geometry, material, quantity, machine_key)
+        cam_data = cam_extractor.get_cam_operations()
+        if cam_data and cam_data.get("available"):
+            operations = cam_data["operations"]
+            futil.log(f"Found {len(operations)} CAM operations")
+    except Exception:  # noqa: BLE001 - CAM is optional; never block the quote
+        operations = None
+
+    try:
+        quote = api_client.request_quote(geometry, material, quantity, machine_key, operations)
     except RuntimeError as err:
         ui.messageBox(str(err), CMD_NAME)
         return

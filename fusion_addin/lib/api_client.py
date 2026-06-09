@@ -11,7 +11,13 @@ import urllib.request
 from .. import config
 
 
-def request_quote(geometry: dict, material: str, quantity: int, machine_type: str) -> dict:
+def request_quote(
+    geometry: dict,
+    material: str,
+    quantity: int,
+    machine_type: str,
+    operations: list | None = None,
+) -> dict:
     """POST a part to the backend and return the parsed quote.
 
     Raises ``RuntimeError`` with a readable message on any network/HTTP failure.
@@ -23,6 +29,8 @@ def request_quote(geometry: dict, material: str, quantity: int, machine_type: st
         "quantity": quantity,
         "machine_type": machine_type,
     }
+    if operations:
+        payload["operations"] = operations
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url,

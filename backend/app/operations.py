@@ -24,10 +24,17 @@ class OperationType(str, Enum):
     groove = "groove"
     thread = "thread"
     cutoff = "cutoff"
+    mill = "mill"      # generic milling op (cycle time comes from CAM, not a formula)
+    other = "other"
 
 
 class Operation(BaseModel):
-    """A single turning/Swiss operation. Lengths/diameters in inches."""
+    """A single machining operation. Lengths/diameters in inches.
+
+    If ``cycle_time_sec`` is set (e.g. read straight from Fusion CAM), it is used
+    verbatim and the speeds/feeds math is skipped for this op. Otherwise cycle
+    time is computed from the live surface speed + feed/rev for the material.
+    """
 
     type: OperationType
     label: str | None = None
@@ -38,6 +45,9 @@ class Operation(BaseModel):
     pitch_in: float | None = Field(default=None, gt=0, description="Thread pitch (in/rev)")
     passes: int = Field(default=1, ge=1)
     peck: bool = False
+    cycle_time_sec: float | None = Field(
+        default=None, ge=0, description="Precomputed cycle time (e.g. from Fusion CAM)"
+    )
 
 
 class OperationDetail(BaseModel):
@@ -72,7 +82,21 @@ def cycle_time_seconds(
     total = 0.0
 
     for i, op in enumerate(operations):
-        rpm = _rpm(sfm, op.dia_in, max_rpm)
+        rpm = _rpm(sfm, op.dia_in, max_rpm) if sfm > 0 else 0.0
+
+        # Precomputed (e.g. Fusion CAM machiningTime): use it verbatim, no formula.
+        if op.cycle_time_sec is not None:
+            details.append(
+                OperationDetail(
+                    label=op.label or op.type.value,
+                    type=op.type,
+                    rpm=int(round(rpm)),
+                    seconds=round(op.cycle_time_sec, 1),
+                )
+            )
+            total += op.cycle_time_sec
+            continue
+
         feed = max(feed_per_rev * rpm, 1e-9)  # in/min
         seconds = 0.0
 

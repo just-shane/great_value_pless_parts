@@ -187,6 +187,20 @@ service-role key, or set `DATUM_SUPABASE_URL` / `DATUM_SUPABASE_KEY`. If the DB
 is unreachable, the quote falls back to a geometry estimate and says so via a
 flag. Try it: `curl -X POST .../api/v1/quote -d @backend/sample_payload_ops.json`.
 
+**Three sources of cycle time**, best-first — each op can carry its own
+`cycle_time_sec`, so they mix freely:
+
+| Source | When | Confidence |
+| --- | --- | --- |
+| **Fusion CAM** | the doc has generated toolpaths — the add-in reads each op's `machiningTime` straight from Fusion | `high` (`fusion_cam`) |
+| **Live speeds & feeds** | an op graph with no times (e.g. a TLK node graph) — computed from `cutting_presets` | `high` (`datum_supabase`) |
+| **Geometry estimate** | no operations at all — removed volume + surface area | `medium`/`low` |
+
+The Fusion add-in tries CAM first ([`cam_extractor.py`](fusion_addin/lib/cam_extractor.py)
+via `CAM.getMachiningTime`), then falls back automatically. So a programmed part
+quotes from its *actual* toolpath times; an unprogrammed part still quotes from
+geometry.
+
 ---
 
 ## Roadmap
